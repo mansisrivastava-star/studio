@@ -2,8 +2,8 @@
 'use client';
 
 import type { Player, LatLngLiteral } from '@/lib/types';
-import { memo, useState, useEffect } from 'react';
-import Map, { Source, Layer, Marker, NavigationControl } from 'react-map-gl';
+import { memo, useState, useEffect, useCallback } from 'react';
+import Map, { Source, Layer, Marker, NavigationControl, Popup } from 'react-map-gl';
 import { Skeleton } from '@/components/ui/skeleton';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -32,22 +32,8 @@ function MapError() {
 
 function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: MapViewProps) {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  const [accentColor, setAccentColor] = useState('#4EE2EC'); // Default accent color
-
-  useEffect(() => {
-    // This is a simple way to get the computed color.
-    // A more robust solution might involve a color conversion library if HSL is needed everywhere.
-    const tempDiv = document.createElement('div');
-    tempDiv.style.color = 'hsl(var(--accent))';
-    document.body.appendChild(tempDiv);
-    const computedStyle = getComputedStyle(tempDiv);
-    const color = computedStyle.color;
-    document.body.removeChild(tempDiv);
-    // The computed color will be in rgb format, e.g., "rgb(78, 226, 236)" which mapbox understands.
-    if (color) {
-      setAccentColor(color);
-    }
-  }, []);
+  const accentColor = '#4EE2EC'; // Default accent color
+  const [hoverInfo, setHoverInfo] = useState<{ lng: number, lat: number, playerName: string } | null>(null);
 
   if (!mapboxToken) return <MapError />;
   if (!currentPosition) return <Skeleton className="w-full h-full" />;
@@ -65,8 +51,36 @@ function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: 
     },
   };
 
+  const interactiveLayerIds = players.flatMap(player => 
+    player.territory.paths.map((_, index) => `${player.id}-fill-${index}`)
+  );
+
+  const onMouseMove = useCallback((event: mapboxgl.MapLayerMouseEvent) => {
+    const { features, lngLat } = event;
+    const hoveredFeature = features && features[0];
+    
+    if (hoveredFeature) {
+      document.getElementById('mapbox-map')!.style.cursor = 'pointer';
+      const layerId = hoveredFeature.layer.id;
+      const playerId = layerId.split('-')[0];
+      const player = players.find(p => p.id === playerId);
+      if (player) {
+        setHoverInfo({
+          lng: lngLat.lng,
+          lat: lngLat.lat,
+          playerName: player.name,
+        });
+      }
+    } else {
+      document.getElementById('mapbox-map')!.style.cursor = '';
+      setHoverInfo(null);
+    }
+  }, [players]);
+
+
   return (
     <Map
+      id="mapbox-map"
       mapboxAccessToken={mapboxToken}
       key={currentPosition.lat + '_' + currentPosition.lng}
       initialViewState={{
@@ -77,16 +91,19 @@ function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: 
       style={{ width: '100%', height: '100%' }}
       mapStyle="mapbox://styles/mapbox/dark-v11"
       onClick={handleMapClick}
+      onMouseMove={onMouseMove}
+      interactiveLayerIds={interactiveLayerIds}
     >
       <NavigationControl position="top-right" />
       {players.map(player => 
         player.territory.paths.map((path, index) => {
+            if (path.length < 3) return null; // A polygon needs at least 3 points
             const polygonGeoJSON: GeoJSON.Feature<GeoJSON.Polygon> = {
                 type: 'Feature',
                 properties: {},
                 geometry: {
                   type: 'Polygon',
-                  coordinates: [path.map(p => [p.lng, p.lat])],
+                  coordinates: [[...path, path[0]].map(p => [p.lng, p.lat])], // Close the polygon
                 },
             };
             return (
@@ -132,6 +149,19 @@ function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: 
           </Marker>
       )}
 
+      {hoverInfo && (
+        <Popup
+          longitude={hoverInfo.lng}
+          latitude={hoverInfo.lat}
+          closeButton={false}
+          closeOnClick={false}
+          anchor="top"
+          offset={10}
+          className="bg-card/80 backdrop-blur-sm !rounded-md !shadow-lg"
+        >
+           <div className="!bg-transparent !p-2 !text-card-foreground font-semibold text-sm">{hoverInfo.playerName}</div>
+        </Popup>
+      )}
     </Map>
   );
 }
