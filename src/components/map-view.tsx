@@ -35,12 +35,17 @@ function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: 
   const [accentColor, setAccentColor] = useState('#4EE2EC'); // Default accent color
 
   useEffect(() => {
-    // This code runs only on the client, after the component has mounted.
-    // This is necessary to access `document` and computed styles.
-    const computedStyle = getComputedStyle(document.documentElement);
-    const accentColorValue = computedStyle.getPropertyValue('--accent').trim();
-    if (accentColorValue) {
-      setAccentColor(`hsl(${accentColorValue})`);
+    // This is a simple way to get the computed color.
+    // A more robust solution might involve a color conversion library if HSL is needed everywhere.
+    const tempDiv = document.createElement('div');
+    tempDiv.style.color = 'hsl(var(--accent))';
+    document.body.appendChild(tempDiv);
+    const computedStyle = getComputedStyle(tempDiv);
+    const color = computedStyle.color;
+    document.body.removeChild(tempDiv);
+    // The computed color will be in rgb format, e.g., "rgb(78, 226, 236)" which mapbox understands.
+    if (color) {
+      setAccentColor(color);
     }
   }, []);
 
