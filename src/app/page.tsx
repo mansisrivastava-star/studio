@@ -9,7 +9,6 @@ import Scoreboard from '@/components/scoreboard';
 import PlayerControls from '@/components/player-controls';
 import { TurfWarIcon } from '@/components/icons';
 import LocationInput from '@/components/location-input';
-import type { MapLayerMouseEvent } from 'react-map-gl';
 
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>(mockPlayers);
@@ -18,11 +17,13 @@ export default function Home() {
   const [path, setPath] = useState<LatLngLiteral[]>([]);
   const [aiOverlay, setAiOverlay] = useState<string | null>(null);
   const [location, setLocation] = useState<string | null>(null);
+  const [isLocationSet, setIsLocationSet] = useState(false);
 
-  const handleLocationSet = (city: string, country: string, coords: LatLngLiteral) => {
-    setLocation(`${city}, ${country}`);
+  const handleLocationSet = (name: string, coords: LatLngLiteral) => {
+    setLocation(name);
     setCurrentPosition(coords);
     setPath([coords]); // Start path at the selected location
+    setIsLocationSet(true);
   };
 
   const handleColorChange = (color: string) => {
@@ -31,11 +32,10 @@ export default function Home() {
       prevPlayers.map((p) => (p.id === currentUser.id ? { ...p, color } : p))
     );
   };
-
-  const handleMapClick = (event: MapLayerMouseEvent) => {
+  
+  const handleMapClick = (coords: LatLngLiteral) => {
     if (!currentPosition) return;
-    const { lng, lat } = event.lngLat;
-    setPath(prevPath => [...prevPath, { lng, lat }]);
+    setPath(prevPath => [...prevPath, coords]);
   };
 
   return (
@@ -70,7 +70,7 @@ export default function Home() {
         />
       </div>
 
-      <LocationInput onLocationSet={handleLocationSet} />
+      <LocationInput onLocationSet={handleLocationSet} isOpen={!isLocationSet} />
     </main>
   );
 }

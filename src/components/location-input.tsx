@@ -23,36 +23,41 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { MapPin, Loader } from 'lucide-react';
+import { useLoadScript } from '@react-google-maps/api';
 
 interface LocationInputProps {
-  onLocationSet: (city: string, country: string, coords: LatLngLiteral) => void;
-}
-
-interface Suggestion {
-  id: string;
-  place_name: string;
-  text: string;
-  context: { id: string; text: string }[];
-  center: [number, number]; // [lng, lat]
+  onLocationSet: (name: string, coords: LatLngLiteral) => void;
+  isOpen: boolean;
 }
 
 const formSchema = z.object({
   search: z.string().min(1, { message: 'Location is required' }),
 });
 
-export default function LocationInput({ onLocationSet }: LocationInputProps) {
-  const [isOpen, setIsOpen] = useState(false);
+const libraries: ('places')[] = ['places'];
+
+export default function LocationInput({ onLocationSet, isOpen }: LocationInputProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-
-  const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
+  
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries,
+  });
 
   useEffect(() => {
-    setIsOpen(true);
-  }, []);
+    if (isLoaded) {
+      autocompleteService.current = new google.maps.places.AutocompleteService();
+      // We need a dummy div to initialize the PlacesService
+      const dummyMapDiv = document.createElement('div');
+      placesService.current = new google.maps.places.PlacesService(dummyMapDiv);
+    }
+  }, [isLoaded]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -62,24 +67,21 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
   });
 
   useEffect(() => {
-    const handler = setTimeout(async () => {
-      if (searchQuery.length > 2 && accessToken) {
+    const handler = setTimeout(() => {
+      if (searchQuery.length > 2 && autocompleteService.current) {
         setIsLoading(true);
-        try {
-          const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-              searchQuery
-            )}.json?access_token=${accessToken}&types=place,neighborhood,address,poi`
-          );
-          const data = await response.json();
-          setSuggestions(data.features || []);
-          setShowSuggestions(true);
-        } catch (error) {
-          console.error('Failed to fetch location suggestions:', error);
-          setSuggestions([]);
-        } finally {
-          setIsLoading(false);
-        }
+        autocompleteService.current.getPlacePredictions(
+          { input: searchQuery },
+          (predictions, status) => {
+            setIsLoading(false);
+            if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+              setSuggestions(predictions);
+              setShowSuggestions(true);
+            } else {
+              setSuggestions([]);
+            }
+          }
+        );
       } else {
         setSuggestions([]);
         setShowSuggestions(false);
@@ -89,7 +91,7 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
     return () => {
       clearTimeout(handler);
     };
-  }, [searchQuery, accessToken]);
+  }, [searchQuery]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -103,23 +105,30 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
     };
   }, [suggestionsRef]);
 
-  const handleSuggestionClick = (suggestion: Suggestion) => {
-    const coords: LatLngLiteral = {
-      lng: suggestion.center[0],
-      lat: suggestion.center[1],
+  const handleSuggestionClick = (suggestion: google.maps.places.AutocompletePrediction) => {
+    if (!placesService.current) return;
+
+    setShowSuggestions(false);
+    form.setValue('search', suggestion.description);
+
+    const request = {
+      placeId: suggestion.place_id,
+      fields: ['name', 'geometry.location'],
     };
 
-    const cityObj = suggestion.context.find(c => c.id.startsWith('place'));
-    const countryObj = suggestion.context.find(c => c.id.startsWith('country'));
-    const city = cityObj ? cityObj.text : suggestion.text;
-    const country = countryObj ? countryObj.text : '';
-
-    onLocationSet(city, country, coords);
-    setIsOpen(false); // Close dialog on selection
+    placesService.current.getDetails(request, (place, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+        const coords: LatLngLiteral = {
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        };
+        onLocationSet(suggestion.description, coords);
+      }
+    });
   };
   
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
           <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
@@ -149,8 +158,9 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
                             setSearchQuery(e.target.value);
                           }}
                           autoComplete="off"
+                          disabled={!isLoaded}
                         />
-                         {isLoading && (
+                         {(isLoading || !isLoaded) && (
                           <Loader className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
                         )}
                       </div>
@@ -164,18 +174,19 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
                     <div className="max-h-60 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
                     {suggestions.map((suggestion) => (
                         <div
-                        key={suggestion.id}
+                        key={suggestion.place_id}
                         className="cursor-pointer p-3 hover:bg-accent text-sm"
                         onClick={() => handleSuggestionClick(suggestion)}
                         >
-                        <p className="font-semibold">{suggestion.text}</p>
-                        <p className="text-xs text-muted-foreground">{suggestion.place_name.substring(suggestion.text.length).replace(/^, /, '')}</p>
+                        <p className="font-semibold">{suggestion.structured_formatting.main_text}</p>
+                        <p className="text-xs text-muted-foreground">{suggestion.structured_formatting.secondary_text}</p>
                         </div>
                     ))}
                     </div>
                 </div>
                 )}
             </div>
+            {loadError && <p className="text-xs text-destructive">Could not load Google Maps search.</p>}
           </form>
         </Form>
       </DialogContent>
