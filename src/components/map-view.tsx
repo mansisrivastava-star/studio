@@ -5,11 +5,11 @@ import { useState, useEffect, memo } from 'react';
 import {
   APIProvider,
   Map,
-  Polygon,
   Polyline,
   AdvancedMarker,
   useMap,
 } from '@vis.gl/react-google-maps';
+import { Polygon } from '@vis.gl/react-google-maps';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface MapViewProps {
