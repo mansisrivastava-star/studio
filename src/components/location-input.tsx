@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import type { LatLngLiteral } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,16 +24,16 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { MapPin, Loader } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface LocationInputProps {
-  onLocationSet: (city: string, country: string) => void;
+  onLocationSet: (city: string, country: string, coords: LatLngLiteral) => void;
 }
 
 interface Suggestion {
   id: string;
   place_name: string;
   context: { id: string; text: string }[];
+  center: [number, number]; // [lng, lat]
 }
 
 const formSchema = z.object({
@@ -47,11 +48,11 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const [selectedCoords, setSelectedCoords] = useState<LatLngLiteral | null>(null);
 
   const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
   useEffect(() => {
-    // Open the dialog automatically on component mount
     setIsOpen(true);
   }, []);
 
@@ -93,7 +94,6 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
     };
   }, [cityQuery, accessToken]);
 
-  // Click outside handler
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
@@ -108,17 +108,29 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onLocationSet(values.city, values.country);
-    setIsOpen(false);
+    if (selectedCoords) {
+      onLocationSet(values.city, values.country, selectedCoords);
+      setIsOpen(false);
+    } else {
+      // Handle case where form is submitted without selecting a suggestion
+      // Potentially show an error or try to geocode the manually entered text
+      console.warn("Form submitted without selecting a location from suggestions.");
+    }
   }
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
     const city = suggestion.place_name.split(',')[0];
     const countryObj = suggestion.context.find(c => c.id.startsWith('country'));
     const country = countryObj ? countryObj.text : '';
+    const coords: LatLngLiteral = {
+      lng: suggestion.center[0],
+      lat: suggestion.center[1],
+    };
 
     form.setValue('city', city);
     form.setValue('country', country);
+    setSelectedCoords(coords);
+    
     setCityQuery(city);
     setShowSuggestions(false);
   };
@@ -152,6 +164,7 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
                           onChange={(e) => {
                             field.onChange(e);
                             setCityQuery(e.target.value);
+                            setSelectedCoords(null); // Reset coords if user types manually
                           }}
                           autoComplete="off"
                         />
@@ -194,7 +207,7 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
               />
             </div>
             <DialogFooter>
-              <Button type="submit">Start Playing</Button>
+              <Button type="submit" disabled={!selectedCoords}>Start Playing</Button>
             </DialogFooter>
           </form>
         </Form>

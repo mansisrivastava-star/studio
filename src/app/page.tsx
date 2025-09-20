@@ -9,8 +9,6 @@ import PlayerControls from '@/components/player-controls';
 import { TurfWarIcon } from '@/components/icons';
 import LocationInput from '@/components/location-input';
 
-const SAN_FRANCISCO_COORDS = { lat: 37.7749, lng: -122.4194 };
-
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>(mockPlayers);
   const [currentUser, setCurrentUser] = useState<Player>(players[0]);
@@ -19,20 +17,10 @@ export default function Home() {
   const [aiOverlay, setAiOverlay] = useState<string | null>(null);
   const [location, setLocation] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Set a default position when the component mounts
-    setCurrentPosition(SAN_FRANCISCO_COORDS);
-  }, []);
-
-  const handleLocationSet = (city: string, country: string) => {
+  const handleLocationSet = (city: string, country: string, coords: LatLngLiteral) => {
     setLocation(`${city}, ${country}`);
-    // For now, we'll just keep the map centered on the default location.
-    // A future step could involve geocoding the city/country to lat/lng.
-    if (!currentPosition) {
-      setCurrentPosition(SAN_FRANCISCO_COORDS);
-    }
+    setCurrentPosition(coords);
   };
-
 
   const handleColorChange = (color: string) => {
     setCurrentUser((prev) => ({ ...prev, color }));
