@@ -3,8 +3,9 @@
 
 import type { Player, LatLngLiteral } from '@/lib/types';
 import { memo } from 'react';
-import { GoogleMap, useLoadScript, Polygon, Polyline, Marker } from '@react-google-maps/api';
+import Map, { Source, Layer, Marker, NavigationControl } from 'react-map-gl';
 import { Skeleton } from '@/components/ui/skeleton';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapViewProps {
   players: Player[];
@@ -22,169 +23,108 @@ function MapError() {
         <p className="text-destructive-foreground">
           Could not load the map.
           <br />
-          Please ensure you have a valid <code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> in your environment variables.
+          Please ensure you have a valid <code>NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN</code> in your environment variables.
         </p>
       </div>
     </div>
   );
 }
 
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
-};
-
-const mapOptions: google.maps.MapOptions = {
-    disableDefaultUI: true,
-    zoomControl: true,
-    clickableIcons: false,
-    styles: [
-        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-        {
-          featureType: "administrative.locality",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#d59563" }],
-        },
-        {
-          featureType: "poi",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#d59563" }],
-        },
-        {
-          featureType: "poi.park",
-          elementType: "geometry",
-          stylers: [{ color: "#263c3f" }],
-        },
-        {
-          featureType: "poi.park",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#6b9a76" }],
-        },
-        {
-          featureType: "road",
-          elementType: "geometry",
-          stylers: [{ color: "#38414e" }],
-        },
-        {
-          featureType: "road",
-          elementType: "geometry.stroke",
-          stylers: [{ color: "#212a37" }],
-        },
-        {
-          featureType: "road",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#9ca5b3" }],
-        },
-        {
-          featureType: "road.highway",
-          elementType: "geometry",
-          stylers: [{ color: "#746855" }],
-        },
-        {
-          featureType: "road.highway",
-          elementType: "geometry.stroke",
-          stylers: [{ color: "#1f2835" }],
-        },
-        {
-          featureType: "road.highway",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#f3d19c" }],
-        },
-        {
-          featureType: "transit",
-          elementType: "geometry",
-          stylers: [{ color: "#2f3948" }],
-        },
-        {
-          featureType: "transit.station",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#d59563" }],
-        },
-        {
-          featureType: "water",
-          elementType: "geometry",
-          stylers: [{ color: "#17263c" }],
-        },
-        {
-          featureType: "water",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#515c6d" }],
-        },
-        {
-          featureType: "water",
-          elementType: "labels.text.stroke",
-          stylers: [{ color: "#17263c" }],
-        },
-      ]
+const markerIconStyle: React.CSSProperties = {
+  width: '20px',
+  height: '20px',
+  borderRadius: '50%',
+  backgroundColor: 'hsl(var(--primary))',
+  border: '2px solid white',
+  boxShadow: '0 0 10px hsl(var(--primary))',
 };
 
 function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: MapViewProps) {
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-  });
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
-  if (loadError) return <MapError />;
-  if (!isLoaded || !currentPosition) return <Skeleton className="w-full h-full" />;
+  if (!mapboxToken) return <MapError />;
+  if (!currentPosition) return <Skeleton className="w-full h-full" />;
 
-  const handleMapClick = (e: google.maps.MapMouseEvent) => {
-    if (e.latLng) {
-      onMapClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-    }
+  const handleMapClick = (e: mapboxgl.MapLayerMouseEvent) => {
+    onMapClick(e.lngLat);
   };
   
-  const markerIcon = {
-    path: 'M-10,0a10,10 0 1,0 20,0a10,10 0 1,0 -20,0',
-    fillColor: '#4285F4',
-    fillOpacity: 1,
-    strokeWeight: 2,
-    strokeColor: '#ffffff',
-    scale: 0.8,
+  const userPathGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'LineString',
+      coordinates: userPath.map(p => [p.lng, p.lat]),
+    },
   };
 
-
   return (
-    <GoogleMap
-      mapContainerStyle={mapContainerStyle}
-      center={currentPosition}
-      zoom={14}
-      options={mapOptions}
+    <Map
+      mapboxAccessToken={mapboxToken}
+      initialViewState={{
+        longitude: currentPosition.lng,
+        latitude: currentPosition.lat,
+        zoom: 14,
+      }}
+      style={{ width: '100%', height: '100%' }}
+      mapStyle="mapbox://styles/mapbox/dark-v11"
       onClick={handleMapClick}
     >
+      <NavigationControl position="top-right" />
       {players.map(player => 
-        player.territory.paths.map((path, index) => (
-          <Polygon
-            key={`${player.id}-${index}`}
-            paths={path}
-            options={{
-              fillColor: player.color,
-              strokeColor: player.color,
-              fillOpacity: 0.35,
-              strokeWeight: 2,
-            }}
-          />
-        ))
+        player.territory.paths.map((path, index) => {
+            const polygonGeoJSON: GeoJSON.Feature<GeoJSON.Polygon> = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'Polygon',
+                  coordinates: [path.map(p => [p.lng, p.lat])],
+                },
+            };
+            return (
+                <Source key={`${player.id}-${index}`} type="geojson" data={polygonGeoJSON}>
+                    <Layer
+                        id={`${player.id}-fill-${index}`}
+                        type="fill"
+                        paint={{
+                            'fill-color': player.color,
+                            'fill-opacity': 0.35,
+                        }}
+                    />
+                    <Layer
+                        id={`${player.id}-stroke-${index}`}
+                        type="line"
+                        paint={{
+                            'line-color': player.color,
+                            'line-width': 2,
+                        }}
+                    />
+                </Source>
+            )
+        })
       )}
 
       {userPath.length > 1 && (
-        <Polyline
-            path={userPath}
-            options={{
-                strokeColor: 'hsl(var(--accent))',
-                strokeOpacity: 1.0,
-                strokeWeight: 4,
-            }}
-        />
+        <Source id="user-path" type="geojson" data={userPathGeoJSON}>
+            <Layer
+                id="user-path-line"
+                type="line"
+                paint={{
+                    'line-color': 'hsl(var(--accent))',
+                    'line-width': 4,
+                    'line-opacity': 1.0,
+                }}
+            />
+        </Source>
       )}
       
-      <Marker position={currentPosition} icon={markerIcon} />
+      {currentPosition && (
+         <Marker longitude={currentPosition.lng} latitude={currentPosition.lat}>
+            <div className="w-5 h-5 rounded-full bg-primary border-2 border-white animate-glow" />
+          </Marker>
+      )}
 
-      {/* AI Overlay is more complex with Google Maps, typically done with GroundOverlay.
-          This implementation is simplified and may need adjustment based on how the overlay is generated. */}
-      {/* {aiOverlay && <GroundOverlay url={aiOverlay} bounds={mapBounds} />} */}
-
-    </GoogleMap>
+    </Map>
   );
 }
 

@@ -70,7 +70,7 @@ export default function Home() {
         />
       </div>
 
-      <LocationInput onLocationSet={handleLocationSet} isOpen={!isLocationSet} />
+      {!isLocationSet && <LocationInput onLocationSet={handleLocationSet} isOpen={!isLocationSet} />}
     </main>
   );
 }
