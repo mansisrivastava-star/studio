@@ -29,9 +29,11 @@ export default function Home() {
   };
 
   const handleColorChange = (color: string) => {
-    setCurrentUser((prev) => ({ ...prev, color }));
-    setPlayers((prevPlayers) =>
-      prevPlayers.map((p) => (p.id === currentUser.id ? { ...p, color } : p))
+    const updatedUser = { ...currentUser, color };
+    setCurrentUser(updatedUser);
+    
+    setPlayers(prevPlayers =>
+      prevPlayers.map(p => (p.id === currentUser.id ? updatedUser : p))
     );
   };
   
