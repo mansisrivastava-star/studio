@@ -3,7 +3,7 @@ import type { Player } from './types';
 export const mockPlayers: Player[] = [
   {
     id: 'user_1',
-    name: 'Player One',
+    name: 'Sardar Khan',
     color: '#3357FF', // Blue
     score: 1250,
     status: 'winning',
@@ -19,7 +19,7 @@ export const mockPlayers: Player[] = [
   },
   {
     id: 'user_2',
-    name: 'CyberNomad',
+    name: 'Shahid Khan',
     color: '#FF5733', // Red-Orange
     score: 980,
     status: 'neutral',
@@ -36,7 +36,7 @@ export const mockPlayers: Player[] = [
   },
   {
     id: 'user_3',
-    name: 'ShadowStrider',
+    name: 'Ramadhir Singh',
     color: '#33FF57', // Green
     score: 1100,
     status: 'neutral',
@@ -53,7 +53,7 @@ export const mockPlayers: Player[] = [
   },
   {
     id: 'user_4',
-    name: 'PixelProwler',
+    name: 'Faizal Khan',
     color: '#FF33A1', // Pink
     score: 750,
     status: 'losing',
