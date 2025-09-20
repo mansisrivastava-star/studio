@@ -6,14 +6,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { LatLngLiteral } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -49,7 +47,6 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const [selectedLocation, setSelectedLocation] = useState<Suggestion | null>(null);
 
   const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
@@ -107,40 +104,25 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
   }, [suggestionsRef]);
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
-    const placeName = suggestion.place_name;
     const coords: LatLngLiteral = {
       lng: suggestion.center[0],
       lat: suggestion.center[1],
     };
 
-    form.setValue('search', placeName);
-    setSelectedLocation(suggestion);
-    
-    setSearchQuery(placeName);
-    setShowSuggestions(false);
-    
-    // Also trigger the location set to update the map immediately
     const cityObj = suggestion.context.find(c => c.id.startsWith('place'));
     const countryObj = suggestion.context.find(c => c.id.startsWith('country'));
     const city = cityObj ? cityObj.text : suggestion.text;
     const country = countryObj ? countryObj.text : '';
 
     onLocationSet(city, country, coords);
+    setIsOpen(false); // Close dialog on selection
   };
   
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    if (selectedLocation) {
-        setIsOpen(false);
-    } else {
-      console.warn("Form submitted without selecting a location from suggestions.");
-    }
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-primary" />
@@ -165,7 +147,6 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
                           onChange={(e) => {
                             field.onChange(e);
                             setSearchQuery(e.target.value);
-                            setSelectedLocation(null);
                           }}
                           autoComplete="off"
                         />
@@ -195,9 +176,6 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
                 </div>
                 )}
             </div>
-            <DialogFooter>
-              <Button type="submit" disabled={!selectedLocation}>Start Playing</Button>
-            </DialogFooter>
           </form>
         </Form>
       </DialogContent>

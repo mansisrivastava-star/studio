@@ -134,7 +134,7 @@ export default function MapView({ players, currentPosition, userPath, aiOverlay 
       )}
 
       <Marker longitude={currentPosition.lng} latitude={currentPosition.lat}>
-        <div className="w-4 h-4 rounded-full bg-accent border-2 border-background shadow-lg" />
+        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border-2 border-background shadow-lg animate-pulse" />
       </Marker>
 
       {aiOverlay && (
