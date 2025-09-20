@@ -34,7 +34,7 @@ export default function Home() {
   };
   
   const handleMapClick = (coords: LatLngLiteral) => {
-    if (!currentPosition) return;
+    if (!isLocationSet) return;
     setPath(prevPath => [...prevPath, coords]);
   };
 

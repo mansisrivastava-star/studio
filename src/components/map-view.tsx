@@ -30,15 +30,6 @@ function MapError() {
   );
 }
 
-const markerIconStyle: React.CSSProperties = {
-  width: '20px',
-  height: '20px',
-  borderRadius: '50%',
-  backgroundColor: 'hsl(var(--primary))',
-  border: '2px solid white',
-  boxShadow: '0 0 10px hsl(var(--primary))',
-};
-
 function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: MapViewProps) {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
@@ -61,6 +52,7 @@ function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: 
   return (
     <Map
       mapboxAccessToken={mapboxToken}
+      key={currentPosition.lat + '_' + currentPosition.lng}
       initialViewState={{
         longitude: currentPosition.lng,
         latitude: currentPosition.lat,
