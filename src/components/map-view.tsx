@@ -5,11 +5,9 @@ import { useState, useEffect, memo } from 'react';
 import {
   APIProvider,
   Map,
-  Polyline,
   AdvancedMarker,
   useMap,
 } from '@vis.gl/react-google-maps';
-import { Polygon } from '@vis.gl/react-google-maps';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface MapViewProps {
@@ -37,7 +35,80 @@ function MapError() {
     );
 }
 
-const MemoizedPolygon = memo(Polygon);
+const PlayerPolygons = memo(({ players }: { players: Player[] }) => {
+  const map = useMap();
+  const [polygons, setPolygons] = useState<google.maps.Polygon[]>([]);
+
+  useEffect(() => {
+    if (!map) return;
+
+    // Clear existing polygons
+    polygons.forEach(p => p.setMap(null));
+    
+    const newPolygons: google.maps.Polygon[] = [];
+    players.forEach(player => {
+      player.territory.paths.forEach(path => {
+        const polygon = new google.maps.Polygon({
+          paths: path,
+          strokeColor: player.color,
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: player.color,
+          fillOpacity: 0.35,
+        });
+        polygon.setMap(map);
+        newPolygons.push(polygon);
+      });
+    });
+    
+    setPolygons(newPolygons);
+
+    return () => {
+      newPolygons.forEach(p => p.setMap(null));
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, players]);
+
+  return null;
+});
+PlayerPolygons.displayName = 'PlayerPolygons';
+
+const UserPathPolyline = memo(({ path }: { path: LatLngLiteral[] }) => {
+  const map = useMap();
+  const [polyline, setPolyline] = useState<google.maps.Polyline | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+
+    if (!polyline) {
+      const newPolyline = new google.maps.Polyline({
+        path: path,
+        strokeColor: '#4EE2EC',
+        strokeOpacity: 1.0,
+        strokeWeight: 5,
+      });
+      newPolyline.setMap(map);
+      setPolyline(newPolyline);
+    } else {
+      polyline.setPath(path);
+    }
+
+    return () => {
+      // Don't remove the polyline on unmount, let it be managed by the parent component's state
+    };
+  }, [map, path, polyline]);
+
+  useEffect(() => {
+    // Cleanup on unmount
+    return () => {
+      polyline?.setMap(null);
+    };
+  }, [polyline]);
+
+  return null;
+});
+UserPathPolyline.displayName = 'UserPathPolyline';
+
 
 function GroundOverlay({
   overlayImage,
@@ -106,23 +177,9 @@ export default function MapView({ players, currentPosition, userPath, aiOverlay 
         mapId={mapId}
         className="w-full h-full"
       >
-        {players.map((player) =>
-          player.territory.paths.map((path, index) => (
-            <MemoizedPolygon
-              key={`${player.id}-${index}`}
-              paths={path}
-              strokeColor={player.color}
-              strokeOpacity={0.8}
-              strokeWeight={2}
-              fillColor={player.color}
-              fillOpacity={0.35}
-            />
-          ))
-        )}
+        <PlayerPolygons players={players} />
 
-        {userPath.length > 1 && (
-          <Polyline path={userPath} strokeColor="#4EE2EC" strokeWeight={5} />
-        )}
+        <UserPathPolyline path={userPath} />
 
         <AdvancedMarker position={currentPosition}>
             <div className="w-4 h-4 rounded-full bg-accent border-2 border-background shadow-lg" />
