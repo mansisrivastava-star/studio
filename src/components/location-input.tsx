@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -32,23 +33,23 @@ interface LocationInputProps {
 interface Suggestion {
   id: string;
   place_name: string;
+  text: string;
   context: { id: string; text: string }[];
   center: [number, number]; // [lng, lat]
 }
 
 const formSchema = z.object({
-  city: z.string().min(1, { message: 'City is required' }),
-  country: z.string().min(1, { message: 'Country is required' }),
+  search: z.string().min(1, { message: 'Location is required' }),
 });
 
 export default function LocationInput({ onLocationSet }: LocationInputProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [cityQuery, setCityQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const [selectedCoords, setSelectedCoords] = useState<LatLngLiteral | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<Suggestion | null>(null);
 
   const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
@@ -59,26 +60,25 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      city: '',
-      country: '',
+      search: '',
     },
   });
 
   useEffect(() => {
     const handler = setTimeout(async () => {
-      if (cityQuery.length > 2 && accessToken) {
+      if (searchQuery.length > 2 && accessToken) {
         setIsLoading(true);
         try {
           const response = await fetch(
             `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-              cityQuery
-            )}.json?access_token=${accessToken}&types=place`
+              searchQuery
+            )}.json?access_token=${accessToken}&types=place,neighborhood,address,poi`
           );
           const data = await response.json();
           setSuggestions(data.features || []);
           setShowSuggestions(true);
         } catch (error) {
-          console.error('Failed to fetch city suggestions:', error);
+          console.error('Failed to fetch location suggestions:', error);
           setSuggestions([]);
         } finally {
           setIsLoading(false);
@@ -92,7 +92,7 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
     return () => {
       clearTimeout(handler);
     };
-  }, [cityQuery, accessToken]);
+  }, [searchQuery, accessToken]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -106,65 +106,66 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
     };
   }, [suggestionsRef]);
 
-
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    if (selectedCoords) {
-      onLocationSet(values.city, values.country, selectedCoords);
-      setIsOpen(false);
-    } else {
-      // Handle case where form is submitted without selecting a suggestion
-      // Potentially show an error or try to geocode the manually entered text
-      console.warn("Form submitted without selecting a location from suggestions.");
-    }
-  }
-
   const handleSuggestionClick = (suggestion: Suggestion) => {
-    const city = suggestion.place_name.split(',')[0];
-    const countryObj = suggestion.context.find(c => c.id.startsWith('country'));
-    const country = countryObj ? countryObj.text : '';
+    const placeName = suggestion.place_name;
     const coords: LatLngLiteral = {
       lng: suggestion.center[0],
       lat: suggestion.center[1],
     };
 
-    form.setValue('city', city);
-    form.setValue('country', country);
-    setSelectedCoords(coords);
+    form.setValue('search', placeName);
+    setSelectedLocation(suggestion);
     
-    setCityQuery(city);
+    setSearchQuery(placeName);
     setShowSuggestions(false);
+    
+    // Also trigger the location set to update the map immediately
+    const cityObj = suggestion.context.find(c => c.id.startsWith('place'));
+    const countryObj = suggestion.context.find(c => c.id.startsWith('country'));
+    const city = cityObj ? cityObj.text : suggestion.text;
+    const country = countryObj ? countryObj.text : '';
+
+    onLocationSet(city, country, coords);
   };
+  
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    if (selectedLocation) {
+        setIsOpen(false);
+    } else {
+      console.warn("Form submitted without selecting a location from suggestions.");
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="relative">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-primary" />
                 Set Your Location
               </DialogTitle>
               <DialogDescription>
-                Enter your city and country to start playing.
+                Enter a city, neighborhood, or address to start playing.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="relative pt-2">
               <FormField
                 control={form.control}
-                name="city"
+                name="search"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City</FormLabel>
+                    <FormLabel>Location</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
-                          placeholder="e.g. San Francisco"
+                          placeholder="e.g., Golden Gate Park, San Francisco"
                           {...field}
                           onChange={(e) => {
                             field.onChange(e);
-                            setCityQuery(e.target.value);
-                            setSelectedCoords(null); // Reset coords if user types manually
+                            setSearchQuery(e.target.value);
+                            setSelectedLocation(null);
                           }}
                           autoComplete="off"
                         />
@@ -178,36 +179,24 @@ export default function LocationInput({ onLocationSet }: LocationInputProps) {
                 )}
               />
                {showSuggestions && suggestions.length > 0 && (
-                <div ref={suggestionsRef} className="absolute z-10 w-full top-[165px] left-0 px-6">
-                    <div className="max-h-48 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+                <div ref={suggestionsRef} className="absolute z-10 w-full mt-1">
+                    <div className="max-h-60 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
                     {suggestions.map((suggestion) => (
                         <div
                         key={suggestion.id}
                         className="cursor-pointer p-3 hover:bg-accent text-sm"
                         onClick={() => handleSuggestionClick(suggestion)}
                         >
-                        {suggestion.place_name}
+                        <p className="font-semibold">{suggestion.text}</p>
+                        <p className="text-xs text-muted-foreground">{suggestion.place_name.substring(suggestion.text.length).replace(/^, /, '')}</p>
                         </div>
                     ))}
                     </div>
                 </div>
                 )}
-              <FormField
-                control={form.control}
-                name="country"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Country</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. USA" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={!selectedCoords}>Start Playing</Button>
+              <Button type="submit" disabled={!selectedLocation}>Start Playing</Button>
             </DialogFooter>
           </form>
         </Form>
