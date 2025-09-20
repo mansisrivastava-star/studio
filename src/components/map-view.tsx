@@ -2,7 +2,7 @@
 'use client';
 
 import type { Player, LatLngLiteral } from '@/lib/types';
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import Map, { Source, Layer, Marker, NavigationControl, Popup } from 'react-map-gl';
 import { Skeleton } from '@/components/ui/skeleton';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -32,8 +32,14 @@ function MapError() {
 
 function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: MapViewProps) {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  const accentColor = '#4EE2EC';
+  const [accentColor, setAccentColor] = useState('#4EE2EC');
   const [hoverInfo, setHoverInfo] = useState<{ lng: number, lat: number, playerName: string } | null>(null);
+
+  useEffect(() => {
+    // In a real app, you might fetch this from a CSS variable, but for now, we'll hardcode it to avoid HSL issues with mapbox
+    // const color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    setAccentColor('#4EE2EC'); // This is the hex value for hsl(183 82% 61%)
+  }, []);
   
   const handleMapClick = (e: mapboxgl.MapLayerMouseEvent) => {
     onMapClick(e.lngLat);
