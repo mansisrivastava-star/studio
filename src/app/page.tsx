@@ -7,7 +7,7 @@ import { mockPlayers } from '@/lib/mock-data';
 import MapView from '@/components/map-view';
 import Scoreboard from '@/components/scoreboard';
 import PlayerControls from '@/components/player-controls';
-import { TurfWarIcon } from '@/components/icons';
+import { GameOfRoadsIcon } from '@/components/icons';
 import LocationInput from '@/components/location-input';
 import { useToast } from '@/hooks/use-toast';
 
@@ -95,10 +95,10 @@ export default function Home() {
       />
       <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start pointer-events-none">
         <div className="flex items-center gap-4 pointer-events-auto bg-card/80 backdrop-blur-sm p-3 rounded-lg">
-          <TurfWarIcon className="h-8 w-8 text-primary" />
+          <GameOfRoadsIcon className="h-8 w-8 text-primary" />
           <div className="flex flex-col">
             <h1 className="text-2xl font-headline font-bold text-foreground">
-              Turf Wars
+              Game of Roads
             </h1>
             {location && <p className="text-sm text-muted-foreground">{location}</p>}
           </div>

@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Turf Wars',
+  title: 'Game of Roads',
   description: 'Expand, defend, and outsmart others to become the ultimate landowner of your city.',
 };
 
