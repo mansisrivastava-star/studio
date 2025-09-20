@@ -2,7 +2,7 @@
 
 import type { Player, LatLngLiteral } from '@/lib/types';
 import { useState, useEffect } from 'react';
-import Map, { Source, Layer, Marker, Image } from 'react-map-gl';
+import Map, { Source, Layer, Marker } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -12,8 +12,6 @@ interface MapViewProps {
   userPath: LatLngLiteral[];
   aiOverlay: string | null;
 }
-
-const initialCenter = { lat: 37.7749, lng: -122.4194 };
 
 function MapError() {
   return (
