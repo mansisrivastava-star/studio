@@ -10,10 +10,9 @@ export const mockPlayers: Player[] = [
     territory: {
       paths: [
         [
-          { lat: 37.78, lng: -122.42 },
-          { lat: 37.78, lng: -122.41 },
-          { lat: 37.77, lng: -122.41 },
-          { lat: 37.77, lng: -122.42 },
+          { lat: 37.7749, lng: -122.4194 },
+          { lat: 37.7752, lng: -122.4170 },
+          { lat: 37.7730, lng: -122.4172 },
         ],
       ],
     },
@@ -27,10 +26,10 @@ export const mockPlayers: Player[] = [
     territory: {
       paths: [
         [
-          { lat: 37.79, lng: -122.43 },
-          { lat: 37.79, lng: -122.42 },
-          { lat: 37.78, lng: -122.42 },
           { lat: 37.78, lng: -122.43 },
+          { lat: 37.781, lng: -122.425 },
+          { lat: 37.778, lng: -122.424 },
+          { lat: 37.777, lng: -122.429 },
         ],
       ],
     },
@@ -44,10 +43,10 @@ export const mockPlayers: Player[] = [
     territory: {
       paths: [
         [
-          { lat: 37.76, lng: -122.41 },
-          { lat: 37.76, lng: -122.40 },
-          { lat: 37.75, lng: -122.40 },
-          { lat: 37.75, lng: -122.41 },
+          { lat: 37.765, lng: -122.418 },
+          { lat: 37.766, lng: -122.415 },
+          { lat: 37.763, lng: -122.414 },
+          { lat: 37.762, lng: -122.417 },
         ],
       ],
     },
@@ -62,9 +61,8 @@ export const mockPlayers: Player[] = [
       paths: [
         [
           { lat: 37.77, lng: -122.44 },
-          { lat: 37.77, lng: -122.43 },
-          { lat: 37.76, lng: -122.43 },
-          { lat: 37.76, lng: -122.44 },
+          { lat: 37.771, lng: -122.435 },
+          { lat: 37.768, lng: -122.434 },
         ],
       ],
     },
