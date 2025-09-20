@@ -2,7 +2,7 @@
 'use client';
 
 import type { Player, LatLngLiteral } from '@/lib/types';
-import { memo, useState, useEffect, useCallback } from 'react';
+import { memo, useState, useCallback } from 'react';
 import Map, { Source, Layer, Marker, NavigationControl, Popup } from 'react-map-gl';
 import { Skeleton } from '@/components/ui/skeleton';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -32,16 +32,44 @@ function MapError() {
 
 function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: MapViewProps) {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  const accentColor = '#4EE2EC'; // Default accent color
+  const accentColor = '#4EE2EC';
   const [hoverInfo, setHoverInfo] = useState<{ lng: number, lat: number, playerName: string } | null>(null);
-
-  if (!mapboxToken) return <MapError />;
-  if (!currentPosition) return <Skeleton className="w-full h-full" />;
-
+  
   const handleMapClick = (e: mapboxgl.MapLayerMouseEvent) => {
     onMapClick(e.lngLat);
   };
   
+  const onMouseMove = useCallback((event: mapboxgl.MapLayerMouseEvent) => {
+    const { features, lngLat } = event;
+    const hoveredFeature = features && features[0];
+    
+    if (hoveredFeature && hoveredFeature.layer) {
+      const mapElement = document.getElementById('mapbox-map');
+      if (mapElement) {
+        mapElement.style.cursor = 'pointer';
+      }
+      const layerId = hoveredFeature.layer.id;
+      const playerId = layerId.split('-')[0];
+      const player = players.find(p => p.id === playerId);
+      if (player) {
+        setHoverInfo({
+          lng: lngLat.lng,
+          lat: lngLat.lat,
+          playerName: player.name,
+        });
+      }
+    } else {
+      const mapElement = document.getElementById('mapbox-map');
+      if (mapElement) {
+        mapElement.style.cursor = '';
+      }
+      setHoverInfo(null);
+    }
+  }, [players]);
+
+  if (!mapboxToken) return <MapError />;
+  if (!currentPosition) return <Skeleton className="w-full h-full" />;
+
   const userPathGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
     type: 'Feature',
     properties: {},
@@ -54,29 +82,6 @@ function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: 
   const interactiveLayerIds = players.flatMap(player => 
     player.territory.paths.map((_, index) => `${player.id}-fill-${index}`)
   );
-
-  const onMouseMove = useCallback((event: mapboxgl.MapLayerMouseEvent) => {
-    const { features, lngLat } = event;
-    const hoveredFeature = features && features[0];
-    
-    if (hoveredFeature) {
-      document.getElementById('mapbox-map')!.style.cursor = 'pointer';
-      const layerId = hoveredFeature.layer.id;
-      const playerId = layerId.split('-')[0];
-      const player = players.find(p => p.id === playerId);
-      if (player) {
-        setHoverInfo({
-          lng: lngLat.lng,
-          lat: lngLat.lat,
-          playerName: player.name,
-        });
-      }
-    } else {
-      document.getElementById('mapbox-map')!.style.cursor = '';
-      setHoverInfo(null);
-    }
-  }, [players]);
-
 
   return (
     <Map
