@@ -170,15 +170,15 @@ export default function LocationInput({ onLocationSet, isOpen }: LocationInputPr
                 )}
               />
                {showSuggestions && suggestions.length > 0 && (
-                <div ref={suggestionsRef} className="absolute z-10 w-full mt-1">
-                    <div className="max-h-60 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+                <div ref={suggestionsRef} className="absolute z-10 w-full mt-1 bg-popover text-popover-foreground rounded-md border shadow-md">
+                    <div className="max-h-60 overflow-y-auto">
                     {suggestions.map((suggestion) => (
                         <div
                         key={suggestion.place_id}
-                        className="cursor-pointer p-3 hover:bg-accent text-sm"
+                        className="cursor-pointer p-3 hover:bg-accent"
                         onClick={() => handleSuggestionClick(suggestion)}
                         >
-                        <p className="font-semibold">{suggestion.structured_formatting.main_text}</p>
+                        <p className="font-semibold text-sm">{suggestion.structured_formatting.main_text}</p>
                         <p className="text-xs text-muted-foreground">{suggestion.structured_formatting.secondary_text}</p>
                         </div>
                     ))}
