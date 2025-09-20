@@ -1,13 +1,15 @@
+
 'use client';
 
 import type { Player, LatLngLiteral } from '@/lib/types';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { mockPlayers } from '@/lib/mock-data';
 import MapView from '@/components/map-view';
 import Scoreboard from '@/components/scoreboard';
 import PlayerControls from '@/components/player-controls';
 import { TurfWarIcon } from '@/components/icons';
 import LocationInput from '@/components/location-input';
+import type { MapLayerMouseEvent } from 'react-map-gl';
 
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>(mockPlayers);
@@ -20,6 +22,7 @@ export default function Home() {
   const handleLocationSet = (city: string, country: string, coords: LatLngLiteral) => {
     setLocation(`${city}, ${country}`);
     setCurrentPosition(coords);
+    setPath([coords]); // Start path at the selected location
   };
 
   const handleColorChange = (color: string) => {
@@ -29,6 +32,12 @@ export default function Home() {
     );
   };
 
+  const handleMapClick = (event: MapLayerMouseEvent) => {
+    if (!currentPosition) return;
+    const { lng, lat } = event.lngLat;
+    setPath(prevPath => [...prevPath, { lng, lat }]);
+  };
+
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       <MapView
@@ -36,6 +45,7 @@ export default function Home() {
         currentPosition={currentPosition}
         userPath={path}
         aiOverlay={aiOverlay}
+        onMapClick={handleMapClick}
       />
       <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start pointer-events-none">
         <div className="flex items-center gap-4 pointer-events-auto bg-card/80 backdrop-blur-sm p-3 rounded-lg">

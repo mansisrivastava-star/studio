@@ -1,8 +1,9 @@
+
 'use client';
 
 import type { Player, LatLngLiteral } from '@/lib/types';
 import { useState, useEffect } from 'react';
-import Map, { Source, Layer, Marker } from 'react-map-gl';
+import Map, { Source, Layer, Marker, type MapLayerMouseEvent } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -11,6 +12,7 @@ interface MapViewProps {
   currentPosition: LatLngLiteral | null;
   userPath: LatLngLiteral[];
   aiOverlay: string | null;
+  onMapClick: (event: MapLayerMouseEvent) => void;
 }
 
 function MapError() {
@@ -49,7 +51,8 @@ const toGeoJSON = (players: Player[]): GeoJSON.FeatureCollection => {
 };
 
 // Convert user path to GeoJSON
-const toPathGeoJSON = (path: LatLngLiteral[]): GeoJSON.Feature => {
+const toPathGeoJSON = (path: LatLngLiteral[]): GeoJSON.Feature | null => {
+    if (path.length < 2) return null;
     return {
         type: 'Feature',
         properties: {},
@@ -60,7 +63,7 @@ const toPathGeoJSON = (path: LatLngLiteral[]): GeoJSON.Feature => {
     };
 };
 
-export default function MapView({ players, currentPosition, userPath, aiOverlay }: MapViewProps) {
+export default function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: MapViewProps) {
   const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
   const [territoryGeoJSON, setTerritoryGeoJSON] = useState<GeoJSON.FeatureCollection | null>(null);
   const [pathGeoJSON, setPathGeoJSON] = useState<GeoJSON.Feature | null>(null);
@@ -98,6 +101,8 @@ export default function MapView({ players, currentPosition, userPath, aiOverlay 
       }}
       style={{ width: '100%', height: '100%' }}
       mapStyle="mapbox://styles/mapbox/dark-v11"
+      onClick={onMapClick}
+      cursor="crosshair"
     >
       {territoryGeoJSON && (
         <Source id="territories" type="geojson" data={territoryGeoJSON}>
@@ -126,8 +131,13 @@ export default function MapView({ players, currentPosition, userPath, aiOverlay 
                 id="user-path-line"
                 type="line"
                 paint={{
-                    'line-color': '#4EE2EC',
-                    'line-width': 5,
+                    'line-color': 'hsl(var(--accent))',
+                    'line-width': 4,
+                    'line-blur': 0.5,
+                }}
+                layout={{
+                    'line-join': 'round',
+                    'line-cap': 'round'
                 }}
             />
         </Source>
