@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Player } from '@/lib/types';
@@ -7,13 +8,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { BrainCircuit, Loader, Palette } from 'lucide-react';
+import { BrainCircuit, Loader, Palette, Pin } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface PlayerControlsProps {
   currentUser: Player;
   onColorChange: (color: string) => void;
   onPrediction: (overlay: string | null) => void;
+  onClaimTerritory: () => void;
+  canClaimTerritory: boolean;
 }
 
 const availableColors = [
@@ -35,6 +38,8 @@ export default function PlayerControls({
   currentUser,
   onColorChange,
   onPrediction,
+  onClaimTerritory,
+  canClaimTerritory
 }: PlayerControlsProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -107,6 +112,14 @@ export default function PlayerControls({
         </div>
         <Separator />
         <div>
+           <Button 
+            onClick={onClaimTerritory} 
+            disabled={!canClaimTerritory} 
+            className="w-full mb-2"
+          >
+            <Pin className="mr-2 h-4 w-4" />
+            Claim Territory
+           </Button>
           <p className="text-sm font-medium mb-2 text-muted-foreground">Defense Tool</p>
           <TooltipProvider>
             <Tooltip>

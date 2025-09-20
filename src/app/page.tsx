@@ -9,8 +9,10 @@ import Scoreboard from '@/components/scoreboard';
 import PlayerControls from '@/components/player-controls';
 import { TurfWarIcon } from '@/components/icons';
 import LocationInput from '@/components/location-input';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
+  const { toast } = useToast();
   const [players, setPlayers] = useState<Player[]>(mockPlayers);
   const [currentUser, setCurrentUser] = useState<Player>(players[0]);
   const [currentPosition, setCurrentPosition] = useState<LatLngLiteral | null>(null);
@@ -36,6 +38,48 @@ export default function Home() {
   const handleMapClick = (coords: LatLngLiteral) => {
     if (!isLocationSet) return;
     setPath(prevPath => [...prevPath, coords]);
+  };
+
+  const handleClaimTerritory = () => {
+    if (path.length < 3) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Path',
+        description: 'You need at least 3 points to claim a territory.',
+      });
+      return;
+    }
+
+    // A simple calculation for score based on area (highly simplified)
+    const newScore = Math.floor(Math.random() * 200) + 50;
+
+    const updatedPlayers = players.map(p => {
+      if (p.id === currentUser.id) {
+        return {
+          ...p,
+          score: p.score + newScore,
+          territory: {
+            ...p.territory,
+            paths: [...p.territory.paths, path],
+          },
+        };
+      }
+      return p;
+    });
+
+    setPlayers(updatedPlayers);
+    
+    // Reset path for the next territory claim
+    if(currentPosition) {
+        setPath([currentPosition]);
+    } else {
+        setPath([]);
+    }
+
+    toast({
+      title: 'Territory Claimed!',
+      description: `You've expanded your turf and gained ${newScore} score.`,
+    });
   };
 
   return (
@@ -67,6 +111,8 @@ export default function Home() {
           currentUser={currentUser}
           onColorChange={handleColorChange}
           onPrediction={setAiOverlay}
+          onClaimTerritory={handleClaimTerritory}
+          canClaimTerritory={path.length >= 3}
         />
       </div>
 
