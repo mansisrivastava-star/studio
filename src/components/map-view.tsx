@@ -3,7 +3,7 @@
 
 import type { Player, LatLngLiteral } from '@/lib/types';
 import { memo } from 'react';
-import { GoogleMap, useLoadScript, Polygon, Polyline, AdvancedMarker } from '@react-google-maps/api';
+import { GoogleMap, useLoadScript, Polygon, Polyline, Marker } from '@react-google-maps/api';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface MapViewProps {
@@ -133,6 +133,16 @@ function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: 
       onMapClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
     }
   };
+  
+  const markerIcon = {
+    path: 'M-10,0a10,10 0 1,0 20,0a10,10 0 1,0 -20,0',
+    fillColor: '#4285F4',
+    fillOpacity: 1,
+    strokeWeight: 2,
+    strokeColor: '#ffffff',
+    scale: 0.8,
+  };
+
 
   return (
     <GoogleMap
@@ -168,9 +178,7 @@ function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: 
         />
       )}
       
-      <AdvancedMarker position={currentPosition}>
-        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border-2 border-background shadow-lg animate-pulse" />
-      </AdvancedMarker>
+      <Marker position={currentPosition} icon={markerIcon} />
 
       {/* AI Overlay is more complex with Google Maps, typically done with GroundOverlay.
           This implementation is simplified and may need adjustment based on how the overlay is generated. */}
