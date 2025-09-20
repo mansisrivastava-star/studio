@@ -7,6 +7,9 @@ import MapView from '@/components/map-view';
 import Scoreboard from '@/components/scoreboard';
 import PlayerControls from '@/components/player-controls';
 import { TurfWarIcon } from '@/components/icons';
+import LocationInput from '@/components/location-input';
+
+const SAN_FRANCISCO_COORDS = { lat: 37.7749, lng: -122.4194 };
 
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>(mockPlayers);
@@ -14,40 +17,22 @@ export default function Home() {
   const [currentPosition, setCurrentPosition] = useState<LatLngLiteral | null>(null);
   const [path, setPath] = useState<LatLngLiteral[]>([]);
   const [aiOverlay, setAiOverlay] = useState<string | null>(null);
+  const [location, setLocation] = useState<string | null>(null);
 
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const newPosition = { lat: latitude, lng: longitude };
-          setCurrentPosition(newPosition);
-          setPath((prevPath) => [...prevPath, newPosition]);
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          // Fallback to a default location if geolocation fails
-          if (!currentPosition) {
-            setCurrentPosition({ lat: 37.7749, lng: -122.4194 }); // San Francisco
-          }
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        }
-      );
+    // Set a default position when the component mounts
+    setCurrentPosition(SAN_FRANCISCO_COORDS);
+  }, []);
 
-      return () => {
-        navigator.geolocation.clearWatch(watchId);
-      };
-    } else {
-        // Fallback for browsers that don't support geolocation
-        if (!currentPosition) {
-            setCurrentPosition({ lat: 37.7749, lng: -122.4194 }); // San Francisco
-        }
+  const handleLocationSet = (city: string, country: string) => {
+    setLocation(`${city}, ${country}`);
+    // For now, we'll just keep the map centered on the default location.
+    // A future step could involve geocoding the city/country to lat/lng.
+    if (!currentPosition) {
+      setCurrentPosition(SAN_FRANCISCO_COORDS);
     }
-  }, [currentPosition]);
+  };
+
 
   const handleColorChange = (color: string) => {
     setCurrentUser((prev) => ({ ...prev, color }));
@@ -67,9 +52,12 @@ export default function Home() {
       <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start pointer-events-none">
         <div className="flex items-center gap-4 pointer-events-auto bg-card/80 backdrop-blur-sm p-3 rounded-lg">
           <TurfWarIcon className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-headline font-bold text-foreground">
-            Turf Wars
-          </h1>
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-headline font-bold text-foreground">
+              Turf Wars
+            </h1>
+            {location && <p className="text-sm text-muted-foreground">{location}</p>}
+          </div>
         </div>
         <div className="pointer-events-auto">
           <Scoreboard players={players} />
@@ -83,6 +71,8 @@ export default function Home() {
           onPrediction={setAiOverlay}
         />
       </div>
+
+      <LocationInput onLocationSet={handleLocationSet} />
     </main>
   );
 }
