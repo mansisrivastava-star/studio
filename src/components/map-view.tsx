@@ -2,7 +2,7 @@
 'use client';
 
 import type { Player, LatLngLiteral } from '@/lib/types';
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import Map, { Source, Layer, Marker, NavigationControl } from 'react-map-gl';
 import { Skeleton } from '@/components/ui/skeleton';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -32,6 +32,17 @@ function MapError() {
 
 function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: MapViewProps) {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const [accentColor, setAccentColor] = useState('#4EE2EC'); // Default accent color
+
+  useEffect(() => {
+    // This code runs only on the client, after the component has mounted.
+    // This is necessary to access `document` and computed styles.
+    const computedStyle = getComputedStyle(document.documentElement);
+    const accentColorValue = computedStyle.getPropertyValue('--accent').trim();
+    if (accentColorValue) {
+      setAccentColor(`hsl(${accentColorValue})`);
+    }
+  }, []);
 
   if (!mapboxToken) return <MapError />;
   if (!currentPosition) return <Skeleton className="w-full h-full" />;
@@ -102,7 +113,7 @@ function MapView({ players, currentPosition, userPath, aiOverlay, onMapClick }: 
                 id="user-path-line"
                 type="line"
                 paint={{
-                    'line-color': 'hsl(var(--accent))',
+                    'line-color': accentColor,
                     'line-width': 4,
                     'line-opacity': 1.0,
                 }}
